@@ -5,6 +5,7 @@ import {
   type JiraComment,
   type JiraUserMatch,
   type JiraWorklog,
+  type JiraSprint,
 } from "../executors/jira.executor.js";
 import { resolveJiraProjectKey } from "../utils/jira-defaults.js";
 import type {
@@ -17,6 +18,9 @@ import type {
   AddWorklogInput,
   UpdateWorklogInput,
   ListWorklogsInput,
+  SetStoryPointsInput,
+  ListSprintsInput,
+  MoveToSprintInput,
 } from "../schemas/jira.schemas.js";
 
 const USER_ID = "default";
@@ -168,5 +172,37 @@ export const jiraService = {
           : "Multiple matches: pick the correct accountId from the list, then call jira_update_issue.";
 
     return { users, count: users.length, hint };
+  },
+
+  async setStoryPoints(input: SetStoryPointsInput): Promise<{ message: string }> {
+    const { token, cloudId } = await authMiddleware("jira", USER_ID);
+    await jiraExecutor.setStoryPoints(
+      token,
+      cloudId!,
+      input.issue_key,
+      input.story_points,
+      input.custom_field_id
+    );
+    return {
+      message: `Set story points to ${input.story_points} on ${input.issue_key}`,
+    };
+  },
+
+  async listSprints(input: ListSprintsInput): Promise<{ sprints: JiraSprint[]; count: number }> {
+    const { token, cloudId } = await authMiddleware("jira", USER_ID);
+    const projectKey = resolveJiraProjectKey(input.project_key);
+    const sprints = await jiraExecutor.listSprints(token, cloudId!, projectKey, {
+      state: input.state,
+      maxResults: input.max_results,
+    });
+    return { sprints, count: sprints.length };
+  },
+
+  async moveToSprint(input: MoveToSprintInput): Promise<{ message: string }> {
+    const { token, cloudId } = await authMiddleware("jira", USER_ID);
+    await jiraExecutor.moveToSprint(token, cloudId!, input.sprint_id, input.issue_key);
+    return {
+      message: `Moved ${input.issue_key} to sprint ${input.sprint_id}`,
+    };
   },
 };

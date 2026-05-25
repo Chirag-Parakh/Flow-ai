@@ -198,6 +198,56 @@ export const listWorklogsSchema = z.object({
     .describe("Maximum work log entries to return (1–100)"),
 });
 
+export const setStoryPointsSchema = z.object({
+  issue_key: z
+    .string()
+    .min(1)
+    .describe("Jira issue key, e.g. SCRUM-15"),
+  story_points: z
+    .number()
+    .min(0)
+    .describe("Story point estimate (e.g. 1, 2, 3, 5, 8)"),
+  custom_field_id: z
+    .string()
+    .optional()
+    .describe(
+      "Custom field ID for story points if your site uses something other than customfield_10016 (default)."
+    ),
+});
+
+export const listSprintsSchema = z.object({
+  project_key: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "Jira project key to find boards for (e.g. SCRUM). Omit to use DEFAULT_JIRA_PROJECT_KEY."
+    ),
+  state: z
+    .enum(["active", "future", "closed"])
+    .optional()
+    .describe("Filter sprints by state. Omit to return all states."),
+  max_results: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(20)
+    .describe("Maximum sprints to return (1–100)"),
+});
+
+export const moveToSprintSchema = z.object({
+  issue_key: z
+    .string()
+    .min(1)
+    .describe("Jira issue key to move, e.g. SCRUM-15"),
+  sprint_id: z
+    .number()
+    .int()
+    .min(1)
+    .describe("Sprint ID (use jira_list_sprints to find it)"),
+});
+
 export type CreateIssueInput = z.infer<typeof createIssueSchema>;
 export type GetIssueInput = z.infer<typeof getIssueSchema>;
 export type UpdateIssueInput = z.infer<typeof updateIssueSchema>;
@@ -207,3 +257,6 @@ export type FindUsersInput = z.infer<typeof findUsersSchema>;
 export type AddWorklogInput = z.infer<typeof addWorklogSchema>;
 export type UpdateWorklogInput = z.infer<typeof updateWorklogSchema>;
 export type ListWorklogsInput = z.infer<typeof listWorklogsSchema>;
+export type SetStoryPointsInput = z.infer<typeof setStoryPointsSchema>;
+export type ListSprintsInput = z.infer<typeof listSprintsSchema>;
+export type MoveToSprintInput = z.infer<typeof moveToSprintSchema>;

@@ -210,6 +210,9 @@ function landingPage() {
     <tr><td><code>jira_add_worklog</code> <span class="badge jira">Jira</span></td><td>Log time spent on an issue</td></tr>
     <tr><td><code>jira_update_worklog</code> <span class="badge jira">Jira</span></td><td>Update an existing work log entry</td></tr>
     <tr><td><code>jira_list_worklogs</code> <span class="badge jira">Jira</span></td><td>List work logs on an issue</td></tr>
+    <tr><td><code>jira_set_story_points</code> <span class="badge jira">Jira</span></td><td>Set story point estimate on an issue</td></tr>
+    <tr><td><code>jira_list_sprints</code> <span class="badge jira">Jira</span></td><td>List sprints for a project board</td></tr>
+    <tr><td><code>jira_move_to_sprint</code> <span class="badge jira">Jira</span></td><td>Move an issue into a sprint</td></tr>
     <tr><td><code>bitbucket_list_repos</code> <span class="badge bb">Bitbucket</span></td><td>List workspace repositories</td></tr>
     <tr><td><code>bitbucket_create_pr</code> <span class="badge bb">Bitbucket</span></td><td>Open a pull request</td></tr>
     <tr><td><code>bitbucket_get_pr</code> <span class="badge bb">Bitbucket</span></td><td>Get pull request details</td></tr>

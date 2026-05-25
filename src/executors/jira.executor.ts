@@ -7,6 +7,10 @@ function jiraBase(cloudId: string) {
   return `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3`;
 }
 
+function agileBase(cloudId: string) {
+  return `https://api.atlassian.com/ex/jira/${cloudId}/rest/agile/1.0`;
+}
+
 function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 }
@@ -70,6 +74,16 @@ export interface JiraWorklog {
   created: string;
   updated: string;
   comment: string | null;
+}
+
+export interface JiraSprint {
+  id: number;
+  name: string;
+  state: string;
+  startDate: string | null;
+  endDate: string | null;
+  boardId: number;
+  boardName: string;
 }
 
 /** User row from Jira user search / assignable search (for assignee accountId). */
@@ -503,6 +517,105 @@ export const jiraExecutor = {
             ? extractAdfText(data.comment as AdfNode)
             : updates.comment ?? null,
       };
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  },
+
+  async setStoryPoints(
+    token: string,
+    cloudId: string,
+    issueKey: string,
+    storyPoints: number,
+    customFieldId = "customfield_10016"
+  ): Promise<void> {
+    logger.debug("jiraExecutor.setStoryPoints", { issueKey, storyPoints, customFieldId });
+
+    try {
+      await axios.put(
+        `${jiraBase(cloudId)}/issue/${issueKey}`,
+        { fields: { [customFieldId]: storyPoints } },
+        { headers: authHeaders(token) }
+      );
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  },
+
+  async listSprints(
+    token: string,
+    cloudId: string,
+    projectKey: string,
+    opts: { state?: string; maxResults: number }
+  ): Promise<JiraSprint[]> {
+    logger.debug("jiraExecutor.listSprints", { projectKey, state: opts.state });
+
+    try {
+      // Find boards for the project first
+      const boardsRes = await axios.get<{
+        values: Array<{ id: number; name: string; location?: { projectKey?: string } }>;
+      }>(`${agileBase(cloudId)}/board`, {
+        headers: authHeaders(token),
+        params: { projectKeyOrId: projectKey, maxResults: 10 },
+      });
+
+      const boards = boardsRes.data.values ?? [];
+      if (boards.length === 0) {
+        throw new Error(`No Agile boards found for project "${projectKey}".`);
+      }
+
+      // Gather sprints from all boards for the project
+      const results: JiraSprint[] = [];
+      for (const board of boards) {
+        const params: Record<string, unknown> = { maxResults: opts.maxResults };
+        if (opts.state) params.state = opts.state;
+
+        const sprintsRes = await axios.get<{
+          values: Array<{
+            id: number;
+            name: string;
+            state: string;
+            startDate?: string;
+            endDate?: string;
+          }>;
+        }>(`${agileBase(cloudId)}/board/${board.id}/sprint`, {
+          headers: authHeaders(token),
+          params,
+        });
+
+        for (const s of sprintsRes.data.values ?? []) {
+          results.push({
+            id: s.id,
+            name: s.name,
+            state: s.state,
+            startDate: s.startDate ?? null,
+            endDate: s.endDate ?? null,
+            boardId: board.id,
+            boardName: board.name,
+          });
+        }
+      }
+
+      return results.slice(0, opts.maxResults);
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  },
+
+  async moveToSprint(
+    token: string,
+    cloudId: string,
+    sprintId: number,
+    issueKey: string
+  ): Promise<void> {
+    logger.debug("jiraExecutor.moveToSprint", { sprintId, issueKey });
+
+    try {
+      await axios.post(
+        `${agileBase(cloudId)}/sprint/${sprintId}/issue`,
+        { issues: [issueKey] },
+        { headers: authHeaders(token) }
+      );
     } catch (err) {
       handleAxiosError(err);
     }
