@@ -61,6 +61,17 @@ export interface JiraComment {
   created: string;
 }
 
+export interface JiraWorklog {
+  id: string;
+  author: string;
+  timeSpent: string;
+  timeSpentSeconds: number;
+  started: string;
+  created: string;
+  updated: string;
+  comment: string | null;
+}
+
 /** User row from Jira user search / assignable search (for assignee accountId). */
 export interface JiraUserMatch {
   accountId: string;
@@ -351,6 +362,147 @@ export const jiraExecutor = {
         active: u.active,
         accountType: u.accountType ?? "atlassian",
       }));
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  },
+
+  async listWorklogs(
+    token: string,
+    cloudId: string,
+    issueKey: string,
+    maxResults: number
+  ): Promise<JiraWorklog[]> {
+    logger.debug("jiraExecutor.listWorklogs", { issueKey });
+
+    try {
+      const { data } = await axios.get<{
+        worklogs: Array<{
+          id: string;
+          author: { displayName: string };
+          timeSpent: string;
+          timeSpentSeconds: number;
+          started: string;
+          created: string;
+          updated: string;
+          comment?: unknown;
+        }>;
+        total: number;
+      }>(`${jiraBase(cloudId)}/issue/${issueKey}/worklog`, {
+        headers: authHeaders(token),
+        params: { maxResults },
+      });
+
+      return (data.worklogs ?? []).map((w) => ({
+        id: w.id,
+        author: w.author.displayName,
+        timeSpent: w.timeSpent,
+        timeSpentSeconds: w.timeSpentSeconds,
+        started: w.started,
+        created: w.created,
+        updated: w.updated,
+        comment:
+          typeof w.comment === "object" && w.comment !== null
+            ? extractAdfText(w.comment as AdfNode)
+            : typeof w.comment === "string"
+              ? w.comment
+              : null,
+      }));
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  },
+
+  async addWorklog(
+    token: string,
+    cloudId: string,
+    issueKey: string,
+    payload: { timeSpent: string; comment?: string; started?: string }
+  ): Promise<JiraWorklog> {
+    logger.debug("jiraExecutor.addWorklog", { issueKey, timeSpent: payload.timeSpent });
+
+    const body: Record<string, unknown> = { timeSpent: payload.timeSpent };
+    if (payload.comment) body.comment = textToAdf(payload.comment);
+    if (payload.started) body.started = payload.started;
+
+    try {
+      const { data } = await axios.post<{
+        id: string;
+        author: { displayName: string };
+        timeSpent: string;
+        timeSpentSeconds: number;
+        started: string;
+        created: string;
+        updated: string;
+        comment?: unknown;
+      }>(
+        `${jiraBase(cloudId)}/issue/${issueKey}/worklog`,
+        body,
+        { headers: authHeaders(token) }
+      );
+
+      return {
+        id: data.id,
+        author: data.author.displayName,
+        timeSpent: data.timeSpent,
+        timeSpentSeconds: data.timeSpentSeconds,
+        started: data.started,
+        created: data.created,
+        updated: data.updated,
+        comment: payload.comment ?? null,
+      };
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  },
+
+  async updateWorklog(
+    token: string,
+    cloudId: string,
+    issueKey: string,
+    worklogId: string,
+    updates: { timeSpent?: string; comment?: string; started?: string }
+  ): Promise<JiraWorklog> {
+    logger.debug("jiraExecutor.updateWorklog", { issueKey, worklogId });
+
+    if (!updates.timeSpent && !updates.comment && !updates.started) {
+      throw new Error("Provide at least one of time_spent, comment, or started to update.");
+    }
+
+    const body: Record<string, unknown> = {};
+    if (updates.timeSpent) body.timeSpent = updates.timeSpent;
+    if (updates.comment !== undefined) body.comment = textToAdf(updates.comment);
+    if (updates.started) body.started = updates.started;
+
+    try {
+      const { data } = await axios.put<{
+        id: string;
+        author: { displayName: string };
+        timeSpent: string;
+        timeSpentSeconds: number;
+        started: string;
+        created: string;
+        updated: string;
+        comment?: unknown;
+      }>(
+        `${jiraBase(cloudId)}/issue/${issueKey}/worklog/${worklogId}`,
+        body,
+        { headers: authHeaders(token) }
+      );
+
+      return {
+        id: data.id,
+        author: data.author.displayName,
+        timeSpent: data.timeSpent,
+        timeSpentSeconds: data.timeSpentSeconds,
+        started: data.started,
+        created: data.created,
+        updated: data.updated,
+        comment:
+          typeof data.comment === "object" && data.comment !== null
+            ? extractAdfText(data.comment as AdfNode)
+            : updates.comment ?? null,
+      };
     } catch (err) {
       handleAxiosError(err);
     }

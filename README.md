@@ -78,7 +78,7 @@ The model will see tools like `jira_create_issue`, `bitbucket_create_pr`, etc. A
 
 ## 6. Tools (quick reference)
 
-**Jira:** `jira_create_issue` · `jira_get_issue` · `jira_update_issue` · `jira_list_issues` · `jira_add_comment` · `jira_find_users`  
+**Jira:** `jira_create_issue` · `jira_get_issue` · `jira_update_issue` · `jira_list_issues` · `jira_add_comment` · `jira_find_users` · `jira_add_worklog` · `jira_update_worklog` · `jira_list_worklogs`  
 
 **Bitbucket:** `bitbucket_list_repos` · `bitbucket_create_pr` · `bitbucket_get_pr` · `bitbucket_merge_pr`
 

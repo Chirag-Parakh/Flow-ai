@@ -1,5 +1,11 @@
 import { authMiddleware } from "../middleware/auth.middleware.js";
-import { jiraExecutor, type JiraIssue, type JiraComment, type JiraUserMatch } from "../executors/jira.executor.js";
+import {
+  jiraExecutor,
+  type JiraIssue,
+  type JiraComment,
+  type JiraUserMatch,
+  type JiraWorklog,
+} from "../executors/jira.executor.js";
 import { resolveJiraProjectKey } from "../utils/jira-defaults.js";
 import type {
   CreateIssueInput,
@@ -8,6 +14,9 @@ import type {
   ListIssuesInput,
   AddCommentInput,
   FindUsersInput,
+  AddWorklogInput,
+  UpdateWorklogInput,
+  ListWorklogsInput,
 } from "../schemas/jira.schemas.js";
 
 const USER_ID = "default";
@@ -84,6 +93,52 @@ export const jiraService = {
     const { token, cloudId } = await authMiddleware("jira", USER_ID);
     const comment = await jiraExecutor.addComment(token, cloudId!, input.issue_key, input.body);
     return { ...comment, message: `Comment added to ${input.issue_key}` };
+  },
+
+  async listWorklogs(input: ListWorklogsInput): Promise<{
+    worklogs: JiraWorklog[];
+    count: number;
+  }> {
+    const { token, cloudId } = await authMiddleware("jira", USER_ID);
+    const worklogs = await jiraExecutor.listWorklogs(
+      token,
+      cloudId!,
+      input.issue_key,
+      input.max_results
+    );
+    return { worklogs, count: worklogs.length };
+  },
+
+  async addWorklog(input: AddWorklogInput): Promise<JiraWorklog & { message: string }> {
+    const { token, cloudId } = await authMiddleware("jira", USER_ID);
+    const worklog = await jiraExecutor.addWorklog(token, cloudId!, input.issue_key, {
+      timeSpent: input.time_spent,
+      comment: input.comment,
+      started: input.started,
+    });
+    return {
+      ...worklog,
+      message: `Logged ${input.time_spent} on ${input.issue_key} (worklog ${worklog.id})`,
+    };
+  },
+
+  async updateWorklog(input: UpdateWorklogInput): Promise<JiraWorklog & { message: string }> {
+    const { token, cloudId } = await authMiddleware("jira", USER_ID);
+    const worklog = await jiraExecutor.updateWorklog(
+      token,
+      cloudId!,
+      input.issue_key,
+      input.worklog_id,
+      {
+        timeSpent: input.time_spent,
+        comment: input.comment,
+        started: input.started,
+      }
+    );
+    return {
+      ...worklog,
+      message: `Updated worklog ${input.worklog_id} on ${input.issue_key}`,
+    };
   },
 
   async findUsers(input: FindUsersInput): Promise<{

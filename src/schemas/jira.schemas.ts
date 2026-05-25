@@ -138,9 +138,72 @@ export const findUsersSchema = z.object({
     .describe("Maximum users to return (1–50)"),
 });
 
+export const addWorklogSchema = z.object({
+  issue_key: z
+    .string()
+    .min(1)
+    .describe("Jira issue key, e.g. SCRUM-15"),
+  time_spent: z
+    .string()
+    .min(1)
+    .describe(
+      "Time spent in Jira duration format, e.g. 2h 30m, 45m, 1d, 1w 2d 4h"
+    ),
+  comment: z
+    .string()
+    .optional()
+    .describe("Optional note for the work log entry"),
+  started: z
+    .string()
+    .optional()
+    .describe(
+      "When the work started (ISO-8601, e.g. 2026-05-25T10:00:00.000+0530). Defaults to now."
+    ),
+});
+
+export const updateWorklogSchema = z.object({
+  issue_key: z
+    .string()
+    .min(1)
+    .describe("Jira issue key, e.g. SCRUM-15"),
+  worklog_id: z
+    .string()
+    .min(1)
+    .describe("Worklog ID to update (use jira_list_worklogs to find it)"),
+  time_spent: z
+    .string()
+    .optional()
+    .describe("New time spent in Jira duration format, e.g. 3h, 1h 15m"),
+  comment: z
+    .string()
+    .optional()
+    .describe("New work log note (plain text)"),
+  started: z
+    .string()
+    .optional()
+    .describe("New start time (ISO-8601)"),
+});
+
+export const listWorklogsSchema = z.object({
+  issue_key: z
+    .string()
+    .min(1)
+    .describe("Jira issue key, e.g. SCRUM-15"),
+  max_results: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(20)
+    .describe("Maximum work log entries to return (1–100)"),
+});
+
 export type CreateIssueInput = z.infer<typeof createIssueSchema>;
 export type GetIssueInput = z.infer<typeof getIssueSchema>;
 export type UpdateIssueInput = z.infer<typeof updateIssueSchema>;
 export type ListIssuesInput = z.infer<typeof listIssuesSchema>;
 export type AddCommentInput = z.infer<typeof addCommentSchema>;
 export type FindUsersInput = z.infer<typeof findUsersSchema>;
+export type AddWorklogInput = z.infer<typeof addWorklogSchema>;
+export type UpdateWorklogInput = z.infer<typeof updateWorklogSchema>;
+export type ListWorklogsInput = z.infer<typeof listWorklogsSchema>;

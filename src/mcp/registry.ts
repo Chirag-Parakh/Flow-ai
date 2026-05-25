@@ -4,6 +4,9 @@ import { updateIssueTool } from "../tools/jira/update-issue.tool.js";
 import { listIssuesTool } from "../tools/jira/list-issues.tool.js";
 import { addCommentTool } from "../tools/jira/add-comment.tool.js";
 import { findUsersTool } from "../tools/jira/find-users.tool.js";
+import { addWorklogTool } from "../tools/jira/add-worklog.tool.js";
+import { updateWorklogTool } from "../tools/jira/update-worklog.tool.js";
+import { listWorklogsTool } from "../tools/jira/list-worklogs.tool.js";
 
 import { listReposTool } from "../tools/bitbucket/list-repos.tool.js";
 import { createPrTool } from "../tools/bitbucket/create-pr.tool.js";
@@ -20,6 +23,9 @@ const ALL_TOOLS: ToolDefinition[] = [
   listIssuesTool,
   addCommentTool,
   findUsersTool,
+  addWorklogTool,
+  updateWorklogTool,
+  listWorklogsTool,
   // Bitbucket
   listReposTool,
   createPrTool,

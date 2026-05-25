@@ -45,8 +45,11 @@ async function mcpHandler(
 
   if (sessionId && transports.has(sessionId)) {
     transport = transports.get(sessionId)!;
-  } else if (!sessionId && request.method === "POST") {
-    // New session — create a fresh MCP server + transport pair
+  } else if (request.method === "POST") {
+    // New session — also handles stale session IDs after a server restart
+    if (sessionId) {
+      logger.warn("Unknown MCP session ID — creating new session", { staleSessionId: sessionId });
+    }
     transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id) => {
@@ -204,6 +207,9 @@ function landingPage() {
     <tr><td><code>jira_list_issues</code> <span class="badge jira">Jira</span></td><td>List issues with filters</td></tr>
     <tr><td><code>jira_add_comment</code> <span class="badge jira">Jira</span></td><td>Add a comment to an issue</td></tr>
     <tr><td><code>jira_find_users</code> <span class="badge jira">Jira</span></td><td>Resolve accountId from email / name / username</td></tr>
+    <tr><td><code>jira_add_worklog</code> <span class="badge jira">Jira</span></td><td>Log time spent on an issue</td></tr>
+    <tr><td><code>jira_update_worklog</code> <span class="badge jira">Jira</span></td><td>Update an existing work log entry</td></tr>
+    <tr><td><code>jira_list_worklogs</code> <span class="badge jira">Jira</span></td><td>List work logs on an issue</td></tr>
     <tr><td><code>bitbucket_list_repos</code> <span class="badge bb">Bitbucket</span></td><td>List workspace repositories</td></tr>
     <tr><td><code>bitbucket_create_pr</code> <span class="badge bb">Bitbucket</span></td><td>Open a pull request</td></tr>
     <tr><td><code>bitbucket_get_pr</code> <span class="badge bb">Bitbucket</span></td><td>Get pull request details</td></tr>
