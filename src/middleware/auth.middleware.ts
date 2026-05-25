@@ -6,8 +6,9 @@ export interface AuthContext {
   userId: string;
   provider: Provider;
   token: string;
-  cloudId?: string;   // Jira
-  workspace?: string; // Bitbucket
+  cloudId?: string;    // Jira
+  cloudName?: string;  // Jira site name (e.g. "chiragparakh")
+  workspace?: string;  // Bitbucket
 }
 
 /**
@@ -19,10 +20,12 @@ export async function authMiddleware(
   userId = "default"
 ): Promise<AuthContext> {
   if (provider === "jira") {
-    const { token, cloudId } = await getJiraToken(userId);
-    return { userId, provider, token, cloudId };
+    const { token, cloudId, cloudName } = await getJiraToken(userId);
+    return { userId, provider, token, cloudId, cloudName };
   }
 
   const { token, workspace } = await getBitbucketToken(userId);
-  return { userId, provider, token, workspace };
+  // Allow DEFAULT_BITBUCKET_WORKSPACE env var to override the stored workspace slug
+  const resolvedWorkspace = process.env.DEFAULT_BITBUCKET_WORKSPACE?.trim() || workspace;
+  return { userId, provider, token, workspace: resolvedWorkspace };
 }

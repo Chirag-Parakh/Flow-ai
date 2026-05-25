@@ -79,7 +79,7 @@ export async function exchangeJiraCode(code: string, userId = "default"): Promis
   logger.info("Jira OAuth connected", { userId, site: site.name });
 }
 
-export async function getJiraToken(userId = "default"): Promise<{ token: string; cloudId: string }> {
+export async function getJiraToken(userId = "default"): Promise<{ token: string; cloudId: string; cloudName: string }> {
   const conn = oauthRepo.find("jira", userId);
   if (!conn || !conn.access_token) {
     throw new Error(
@@ -92,13 +92,13 @@ export async function getJiraToken(userId = "default"): Promise<{ token: string;
     return refreshJiraToken(conn, userId);
   }
 
-  return { token: conn.access_token, cloudId: conn.cloud_id! };
+  return { token: conn.access_token, cloudId: conn.cloud_id!, cloudName: conn.cloud_name! };
 }
 
 async function refreshJiraToken(
   conn: OAuthConnection,
   userId: string
-): Promise<{ token: string; cloudId: string }> {
+): Promise<{ token: string; cloudId: string; cloudName: string }> {
   if (!conn.refresh_token) throw new Error("No Jira refresh token. Please re-authorize.");
 
   logger.debug("Refreshing Jira access token", { userId });
@@ -122,7 +122,7 @@ async function refreshJiraToken(
     expires_at: expiresAt,
   });
 
-  return { token: data.access_token, cloudId: conn.cloud_id! };
+  return { token: data.access_token, cloudId: conn.cloud_id!, cloudName: conn.cloud_name! };
 }
 
 // ─── Bitbucket ────────────────────────────────────────────────────────────────
@@ -154,11 +154,14 @@ export async function exchangeBitbucketCode(code: string, userId = "default"): P
     }
   );
 
-  // Fetch the default workspace
-  const { data: user } = await axios.get<{ account_id: string; username: string }>(
+  // Fetch account info to derive workspace slug
+  const { data: user } = await axios.get<{ account_id: string; username: string; nickname: string }>(
     "https://api.bitbucket.org/2.0/user",
     { headers: { Authorization: `Bearer ${data.access_token}` } }
   );
+
+  // Prefer DEFAULT_BITBUCKET_WORKSPACE env override; otherwise use username (account slug)
+  const workspace = process.env.DEFAULT_BITBUCKET_WORKSPACE?.trim() || user.username;
 
   const expiresAt = data.expires_in ? Math.floor(Date.now() / 1000) + data.expires_in : null;
 
@@ -166,10 +169,10 @@ export async function exchangeBitbucketCode(code: string, userId = "default"): P
     access_token: data.access_token,
     refresh_token: data.refresh_token ?? null,
     expires_at: expiresAt,
-    workspace: user.username,
+    workspace,
   });
 
-  logger.info("Bitbucket OAuth connected", { userId, workspace: user.username });
+  logger.info("Bitbucket OAuth connected", { userId, workspace });
 }
 
 export async function getBitbucketToken(userId = "default"): Promise<{ token: string; workspace: string }> {

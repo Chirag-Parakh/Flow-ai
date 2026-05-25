@@ -19,10 +19,10 @@ export const jiraService = {
     url: string;
     message: string;
   }> {
-    const { token, cloudId } = await authMiddleware("jira", USER_ID);
+    const { token, cloudId, cloudName } = await authMiddleware("jira", USER_ID);
     const projectKey = resolveJiraProjectKey(input.project_key);
 
-    const result = await jiraExecutor.createIssue(token, cloudId!, {
+    const result = await jiraExecutor.createIssue(token, cloudId!, cloudName!, {
       projectKey,
       summary: input.title,
       description: input.description,
@@ -39,8 +39,8 @@ export const jiraService = {
   },
 
   async getIssue(input: GetIssueInput): Promise<JiraIssue> {
-    const { token, cloudId } = await authMiddleware("jira", USER_ID);
-    return jiraExecutor.getIssue(token, cloudId!, input.issue_key);
+    const { token, cloudId, cloudName } = await authMiddleware("jira", USER_ID);
+    return jiraExecutor.getIssue(token, cloudId!, cloudName!, input.issue_key);
   },
 
   async updateIssue(input: UpdateIssueInput): Promise<{ message: string }> {
@@ -67,10 +67,10 @@ export const jiraService = {
   },
 
   async listIssues(input: ListIssuesInput): Promise<{ issues: JiraIssue[]; count: number }> {
-    const { token, cloudId } = await authMiddleware("jira", USER_ID);
+    const { token, cloudId, cloudName } = await authMiddleware("jira", USER_ID);
     const projectKey = resolveJiraProjectKey(input.project_key);
 
-    const issues = await jiraExecutor.listIssues(token, cloudId!, {
+    const issues = await jiraExecutor.listIssues(token, cloudId!, cloudName!, {
       projectKey,
       status: input.status,
       assigneeAccountId: input.assignee_account_id,

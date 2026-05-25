@@ -76,6 +76,7 @@ export const jiraExecutor = {
   async createIssue(
     token: string,
     cloudId: string,
+    siteName: string,
     payload: {
       projectKey: string;
       summary: string;
@@ -109,14 +110,14 @@ export const jiraExecutor = {
       return {
         issueKey: data.key,
         issueId: data.id,
-        url: `https://your-site.atlassian.net/browse/${data.key}`,
+        url: `https://${siteName}.atlassian.net/browse/${data.key}`,
       };
     } catch (err) {
       handleAxiosError(err);
     }
   },
 
-  async getIssue(token: string, cloudId: string, issueKey: string): Promise<JiraIssue> {
+  async getIssue(token: string, cloudId: string, siteName: string, issueKey: string): Promise<JiraIssue> {
     logger.debug("jiraExecutor.getIssue", { issueKey });
 
     try {
@@ -156,7 +157,7 @@ export const jiraExecutor = {
         labels: data.fields.labels ?? [],
         created: data.fields.created,
         updated: data.fields.updated,
-        url: `https://your-site.atlassian.net/browse/${data.key}`,
+        url: `https://${siteName}.atlassian.net/browse/${data.key}`,
       };
     } catch (err) {
       handleAxiosError(err);
@@ -235,6 +236,7 @@ export const jiraExecutor = {
   async listIssues(
     token: string,
     cloudId: string,
+    siteName: string,
     opts: {
       projectKey: string;
       status?: string;
@@ -250,7 +252,7 @@ export const jiraExecutor = {
     jql += " ORDER BY created DESC";
 
     try {
-      const { data } = await axios.get<{
+      const { data } = await axios.post<{
         issues: Array<{
           id: string;
           key: string;
@@ -267,10 +269,11 @@ export const jiraExecutor = {
             updated: string;
           };
         }>;
-      }>(`${jiraBase(cloudId)}/search`, {
-        headers: authHeaders(token),
-        params: { jql, maxResults: opts.maxResults, fields: "summary,status,issuetype,priority,assignee,reporter,description,labels,created,updated" },
-      });
+      }>(`${jiraBase(cloudId)}/search/jql`, {
+        jql,
+        maxResults: opts.maxResults,
+        fields: ["summary", "status", "issuetype", "priority", "assignee", "reporter", "description", "labels", "created", "updated"],
+      }, { headers: authHeaders(token) });
 
       return data.issues.map((issue) => ({
         id: issue.id,
@@ -288,7 +291,7 @@ export const jiraExecutor = {
         labels: issue.fields.labels ?? [],
         created: issue.fields.created,
         updated: issue.fields.updated,
-        url: `https://your-site.atlassian.net/browse/${issue.key}`,
+        url: `https://${siteName}.atlassian.net/browse/${issue.key}`,
       }));
     } catch (err) {
       handleAxiosError(err);
