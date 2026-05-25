@@ -11,6 +11,7 @@ import { setStoryPointsTool } from "../tools/jira/set-story-points.tool.js";
 import { listSprintsTool } from "../tools/jira/list-sprints.tool.js";
 import { moveToSprintTool } from "../tools/jira/move-to-sprint.tool.js";
 import { listBoardColumnsTool } from "../tools/jira/list-board-columns.tool.js";
+import { userTimeReportTool } from "../tools/jira/user-time-report.tool.js";
 
 import { listReposTool } from "../tools/bitbucket/list-repos.tool.js";
 import { createPrTool } from "../tools/bitbucket/create-pr.tool.js";
@@ -34,6 +35,7 @@ const ALL_TOOLS: ToolDefinition[] = [
   listSprintsTool,
   moveToSprintTool,
   listBoardColumnsTool,
+  userTimeReportTool,
   // Bitbucket
   listReposTool,
   createPrTool,

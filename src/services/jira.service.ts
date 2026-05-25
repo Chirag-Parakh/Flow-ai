@@ -23,6 +23,7 @@ import type {
   ListSprintsInput,
   ListBoardColumnsInput,
   MoveToSprintInput,
+  UserTimeReportInput,
 } from "../schemas/jira.schemas.js";
 
 const USER_ID = "default";
@@ -218,5 +219,44 @@ export const jiraService = {
     return {
       message: `Moved ${input.issue_key} to sprint ${input.sprint_id}`,
     };
+  },
+
+  async getUserTimeReport(input: UserTimeReportInput) {
+    const { token, cloudId, cloudName } = await authMiddleware("jira", USER_ID);
+
+    let accountId = input.account_id;
+    let displayName = input.user_query;
+
+    if (!accountId) {
+      const users = await jiraExecutor.searchUsers(token, cloudId!, {
+        query: input.user_query,
+        maxResults: 5,
+      });
+
+      if (users.length === 0) {
+        throw new Error(
+          `No Jira user found matching "${input.user_query}". Try a different name or provide account_id directly.`
+        );
+      }
+
+      const exact = users.find(
+        (u) => u.displayName.toLowerCase() === input.user_query.toLowerCase()
+      ) ?? users[0];
+
+      accountId = exact.accountId;
+      displayName = exact.displayName;
+    }
+
+    const projectKey = input.project_key
+      ? input.project_key
+      : undefined;
+
+    return jiraExecutor.getUserTimeReport(token, cloudId!, cloudName!, {
+      accountId,
+      displayName,
+      days: input.days,
+      projectKey,
+      maxIssues: input.max_issues,
+    });
   },
 };

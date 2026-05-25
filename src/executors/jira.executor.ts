@@ -685,6 +685,114 @@ export const jiraExecutor = {
     }
   },
 
+  async getUserTimeReport(
+    token: string,
+    cloudId: string,
+    siteName: string,
+    opts: {
+      accountId: string;
+      displayName: string;
+      days: number;
+      projectKey?: string;
+      maxIssues: number;
+    }
+  ): Promise<{
+    user: string;
+    periodDays: number;
+    issueBreakdown: Array<{
+      issueKey: string;
+      summary: string;
+      url: string;
+      entries: Array<{ timeSpent: string; timeSpentSeconds: number; started: string; comment: string | null }>;
+      issueSeconds: number;
+    }>;
+    totalSeconds: number;
+    totalFormatted: string;
+  }> {
+    logger.debug("jiraExecutor.getUserTimeReport", { accountId: opts.accountId, days: opts.days });
+
+    const cutoff = new Date(Date.now() - opts.days * 24 * 60 * 60 * 1000);
+
+    let jql = `worklogAuthor = "${opts.accountId}" AND worklogDate >= -${opts.days}d`;
+    if (opts.projectKey) jql += ` AND project = "${opts.projectKey}"`;
+    jql += " ORDER BY updated DESC";
+
+    try {
+      const searchRes = await axios.post<{
+        issues: Array<{ id: string; key: string; fields: { summary: string } }>;
+      }>(
+        `${jiraBase(cloudId)}/search/jql`,
+        { jql, maxResults: opts.maxIssues, fields: ["summary"] },
+        { headers: authHeaders(token) }
+      );
+
+      const issues = searchRes.data.issues ?? [];
+      const issueBreakdown: Array<{
+        issueKey: string;
+        summary: string;
+        url: string;
+        entries: Array<{ timeSpent: string; timeSpentSeconds: number; started: string; comment: string | null }>;
+        issueSeconds: number;
+      }> = [];
+
+      for (const issue of issues) {
+        const wlRes = await axios.get<{
+          worklogs: Array<{
+            id: string;
+            author: { accountId: string; displayName: string };
+            timeSpent: string;
+            timeSpentSeconds: number;
+            started: string;
+            comment?: unknown;
+          }>;
+        }>(`${jiraBase(cloudId)}/issue/${issue.key}/worklog`, {
+          headers: authHeaders(token),
+          params: { maxResults: 100 },
+        });
+
+        const entries = (wlRes.data.worklogs ?? [])
+          .filter((w) => {
+            if (w.author.accountId !== opts.accountId) return false;
+            return new Date(w.started) >= cutoff;
+          })
+          .map((w) => ({
+            timeSpent: w.timeSpent,
+            timeSpentSeconds: w.timeSpentSeconds,
+            started: w.started,
+            comment:
+              typeof w.comment === "object" && w.comment !== null
+                ? extractAdfText(w.comment as AdfNode)
+                : typeof w.comment === "string"
+                  ? w.comment
+                  : null,
+          }));
+
+        if (entries.length === 0) continue;
+
+        const issueSeconds = entries.reduce((s, e) => s + e.timeSpentSeconds, 0);
+        issueBreakdown.push({
+          issueKey: issue.key,
+          summary: issue.fields.summary,
+          url: `https://${siteName}.atlassian.net/browse/${issue.key}`,
+          entries,
+          issueSeconds,
+        });
+      }
+
+      const totalSeconds = issueBreakdown.reduce((s, i) => s + i.issueSeconds, 0);
+
+      return {
+        user: opts.displayName,
+        periodDays: opts.days,
+        issueBreakdown,
+        totalSeconds,
+        totalFormatted: formatSeconds(totalSeconds),
+      };
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  },
+
   async addComment(
     token: string,
     cloudId: string,
@@ -716,6 +824,26 @@ export const jiraExecutor = {
     }
   },
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatSeconds(totalSeconds: number): string {
+  if (totalSeconds === 0) return "0m";
+  const weeks = Math.floor(totalSeconds / (5 * 8 * 3600));
+  const remaining1 = totalSeconds % (5 * 8 * 3600);
+  const days = Math.floor(remaining1 / (8 * 3600));
+  const remaining2 = remaining1 % (8 * 3600);
+  const hours = Math.floor(remaining2 / 3600);
+  const minutes = Math.floor((remaining2 % 3600) / 60);
+  return [
+    weeks > 0 ? `${weeks}w` : "",
+    days > 0 ? `${days}d` : "",
+    hours > 0 ? `${hours}h` : "",
+    minutes > 0 ? `${minutes}m` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
 // ─── ADF text extraction ──────────────────────────────────────────────────────
 

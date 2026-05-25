@@ -266,6 +266,40 @@ export const moveToSprintSchema = z.object({
     .describe("Sprint ID (use jira_list_sprints to find it)"),
 });
 
+export const userTimeReportSchema = z.object({
+  user_query: z
+    .string()
+    .min(1)
+    .default("Chirag Parakh")
+    .describe(
+      "Display name, email, or name fragment to identify the user. Defaults to 'Chirag Parakh'."
+    ),
+  account_id: z
+    .string()
+    .optional()
+    .describe("Atlassian account ID of the user. If provided, skips the user-lookup step."),
+  days: z
+    .number()
+    .int()
+    .min(1)
+    .max(90)
+    .default(7)
+    .describe("Number of past days to include (default 7 = last week)."),
+  project_key: z
+    .string()
+    .optional()
+    .describe(
+      "Restrict to a specific project key (e.g. SCRUM). Omit to search across all projects."
+    ),
+  max_issues: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(50)
+    .describe("Maximum issues to scan for worklogs (1–100)."),
+});
+
 export type CreateIssueInput = z.infer<typeof createIssueSchema>;
 export type GetIssueInput = z.infer<typeof getIssueSchema>;
 export type UpdateIssueInput = z.infer<typeof updateIssueSchema>;
@@ -279,3 +313,4 @@ export type SetStoryPointsInput = z.infer<typeof setStoryPointsSchema>;
 export type ListSprintsInput = z.infer<typeof listSprintsSchema>;
 export type ListBoardColumnsInput = z.infer<typeof listBoardColumnsSchema>;
 export type MoveToSprintInput = z.infer<typeof moveToSprintSchema>;
+export type UserTimeReportInput = z.infer<typeof userTimeReportSchema>;
