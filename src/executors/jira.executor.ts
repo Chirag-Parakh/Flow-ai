@@ -86,6 +86,11 @@ export interface JiraSprint {
   boardName: string;
 }
 
+export interface JiraBoardColumn {
+  name: string;
+  statuses: string[];
+}
+
 /** User row from Jira user search / assignable search (for assignee accountId). */
 export interface JiraUserMatch {
   accountId: string;
@@ -616,6 +621,65 @@ export const jiraExecutor = {
         { issues: [issueKey] },
         { headers: authHeaders(token) }
       );
+    } catch (err) {
+      handleAxiosError(err);
+    }
+  },
+
+  async listBoardColumns(
+    token: string,
+    cloudId: string,
+    projectKey: string,
+    boardId?: number
+  ): Promise<{ boardId: number; boardName: string; columns: JiraBoardColumn[] }> {
+    logger.debug("jiraExecutor.listBoardColumns", { projectKey, boardId });
+
+    try {
+      let resolvedBoardId: number;
+      let resolvedBoardName: string;
+
+      if (boardId) {
+        resolvedBoardId = boardId;
+        resolvedBoardName = `Board ${boardId}`;
+      } else {
+        const boardsRes = await axios.get<{
+          values: Array<{ id: number; name: string }>;
+        }>(`${agileBase(cloudId)}/board`, {
+          headers: authHeaders(token),
+          params: { projectKeyOrId: projectKey, maxResults: 1 },
+        });
+
+        const boards = boardsRes.data.values ?? [];
+        if (boards.length === 0) {
+          throw new Error(`No Agile boards found for project "${projectKey}".`);
+        }
+        resolvedBoardId = boards[0].id;
+        resolvedBoardName = boards[0].name;
+      }
+
+      const { data } = await axios.get<{
+        name: string;
+        columnConfig: {
+          columns: Array<{
+            name: string;
+            statuses: Array<{ id: string; self: string }>;
+          }>;
+        };
+      }>(`${agileBase(cloudId)}/board/${resolvedBoardId}/configuration`, {
+        headers: authHeaders(token),
+      });
+
+      const columns: JiraBoardColumn[] = data.columnConfig.columns.map((col) => ({
+        name: col.name,
+        statuses: col.statuses.map((s) => {
+          // The status id in board config is a URL like .../status/3 — extract the name via self
+          // or just return the id; callers can cross-reference with jira_list_issues status filter
+          const parts = s.self.split("/");
+          return parts[parts.length - 1];
+        }),
+      }));
+
+      return { boardId: resolvedBoardId, boardName: resolvedBoardName, columns };
     } catch (err) {
       handleAxiosError(err);
     }

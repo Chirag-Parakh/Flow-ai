@@ -6,6 +6,7 @@ import {
   type JiraUserMatch,
   type JiraWorklog,
   type JiraSprint,
+  type JiraBoardColumn,
 } from "../executors/jira.executor.js";
 import { resolveJiraProjectKey } from "../utils/jira-defaults.js";
 import type {
@@ -20,6 +21,7 @@ import type {
   ListWorklogsInput,
   SetStoryPointsInput,
   ListSprintsInput,
+  ListBoardColumnsInput,
   MoveToSprintInput,
 } from "../schemas/jira.schemas.js";
 
@@ -196,6 +198,18 @@ export const jiraService = {
       maxResults: input.max_results,
     });
     return { sprints, count: sprints.length };
+  },
+
+  async listBoardColumns(input: ListBoardColumnsInput): Promise<{
+    boardId: number;
+    boardName: string;
+    columns: JiraBoardColumn[];
+    columnCount: number;
+  }> {
+    const { token, cloudId } = await authMiddleware("jira", USER_ID);
+    const projectKey = resolveJiraProjectKey(input.project_key);
+    const result = await jiraExecutor.listBoardColumns(token, cloudId!, projectKey, input.board_id);
+    return { ...result, columnCount: result.columns.length };
   },
 
   async moveToSprint(input: MoveToSprintInput): Promise<{ message: string }> {

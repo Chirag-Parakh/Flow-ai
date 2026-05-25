@@ -236,6 +236,24 @@ export const listSprintsSchema = z.object({
     .describe("Maximum sprints to return (1–100)"),
 });
 
+export const listBoardColumnsSchema = z.object({
+  project_key: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "Jira project key to find boards for (e.g. SCRUM). Omit to use DEFAULT_JIRA_PROJECT_KEY."
+    ),
+  board_id: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe(
+      "Specific board ID to inspect. If omitted, the first board found for the project is used."
+    ),
+});
+
 export const moveToSprintSchema = z.object({
   issue_key: z
     .string()
@@ -259,4 +277,5 @@ export type UpdateWorklogInput = z.infer<typeof updateWorklogSchema>;
 export type ListWorklogsInput = z.infer<typeof listWorklogsSchema>;
 export type SetStoryPointsInput = z.infer<typeof setStoryPointsSchema>;
 export type ListSprintsInput = z.infer<typeof listSprintsSchema>;
+export type ListBoardColumnsInput = z.infer<typeof listBoardColumnsSchema>;
 export type MoveToSprintInput = z.infer<typeof moveToSprintSchema>;
